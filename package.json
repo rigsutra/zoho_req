@@ -1,0 +1,46 @@
+{
+  "name": "zoho_req",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rigsutra/zoho_req.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rigsutra/zoho_req/issues"
+  },
+  "homepage": "https://github.com/rigsutra/zoho_req#readme",
+  "dependencies": {
+    "@clerk/clerk-react": "^5.60.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "convex": "^1.31.7",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.564.0",
+    "react": "^19.2.4",
+    "react-big-calendar": "^1.19.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.0",
+    "tailwind-merge": "^3.4.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/node": "^25.2.3",
+    "@types/react": "^19.2.14",
+    "@types/react-big-calendar": "^1.16.3",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}
