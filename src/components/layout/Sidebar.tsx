@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Logo } from "@/components/shared/Logo";
 import {
   Home,
   Users,
@@ -40,9 +41,10 @@ export function Sidebar({ role }: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r bg-sidebar-background">
       <div className="flex h-16 items-center border-b px-6">
-        <h1 className="text-xl font-bold text-sidebar-primary">
-          {role === "admin" ? "ZohoHR Admin" : "ZohoHR"}
-        </h1>
+        <Logo size="sm" showText={false} />
+        <span className="ml-3 text-lg font-semibold text-sidebar-primary">
+          {role === "admin" ? "Admin Portal" : "Podtech"}
+        </span>
       </div>
       <nav className="space-y-1 p-4">
         {navItems.map((item) => (

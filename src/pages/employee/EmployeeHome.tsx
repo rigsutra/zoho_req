@@ -19,43 +19,46 @@ import {
   Users,
   Building2,
   Map,
+  User,
+  Briefcase,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function EmployeeHome() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Home</h1>
-      <Tabs defaultValue="myspace">
-        <TabsList>
-          <TabsTrigger value="myspace">My Space</TabsTrigger>
-          <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="organization">Organization</TabsTrigger>
-        </TabsList>
-        <TabsContent value="myspace"><MySpaceTab /></TabsContent>
-        <TabsContent value="team"><TeamTab /></TabsContent>
-        <TabsContent value="organization"><OrganizationTab /></TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-
-function MySpaceTab() {
+  const profile = useQuery(api.employees.getMyProfile);
   const todayRecord = useQuery(api.attendance.getTodayStatus);
   const todayLogs = useQuery(
     api.attendance.getLogs,
     todayRecord ? { attendanceId: todayRecord._id } : "skip"
   );
-  const leaveBalances = useQuery(api.leaveBalances.getMyBalances);
-  const myRequests = useQuery(api.leaves.getMyRequests, {});
   const checkIn = useMutation(api.attendance.checkIn);
   const checkOut = useMutation(api.attendance.checkOut);
   const { getLocation, isLoading: locationLoading, error: locationError } = useGeolocation();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState({ hours: 0, minutes: 0, seconds: 0 });
 
   const isCheckedIn = todayRecord?.isCheckedIn ?? false;
+
+  // Timer effect
+  useEffect(() => {
+    if (!isCheckedIn || !todayRecord?.lastCheckIn) return;
+    
+    const interval = setInterval(() => {
+      const checkInTime = new Date(todayRecord.lastCheckIn!).getTime();
+      const now = Date.now();
+      const diff = now - checkInTime;
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setElapsedTime({ hours, minutes, seconds });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isCheckedIn, todayRecord?.lastCheckIn]);
 
   const handleCheckIn = async () => {
     setIsSubmitting(true);
@@ -83,7 +86,6 @@ function MySpaceTab() {
     }
   };
 
-  // Build map locations from logs
   const mapLocations = (todayLogs ?? []).map((log, idx) => ({
     latitude: log.location.latitude,
     longitude: log.location.longitude,
@@ -93,133 +95,359 @@ function MySpaceTab() {
     type: log.type as "check-in" | "check-out",
   }));
 
-  const pendingLeaves = myRequests?.filter((r) => r.status === "pending") ?? [];
-
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" /> Attendance
-          </CardTitle>
-          <CardDescription>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {todayRecord === undefined ? (
-            <Skeleton className="h-24 w-full" />
-          ) : (
-            <div className="space-y-4">
-              {/* Current status */}
-              <div className="flex items-center gap-4">
-                {!todayRecord ? (
-                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full bg-gray-400" />
-                    <span className="text-muted-foreground">Not checked in yet</span>
-                  </div>
-                ) : isCheckedIn ? (
-                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-green-700 font-medium">
-                      Working since {formatTime(todayRecord.lastCheckIn)}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full bg-blue-500" />
-                    <span className="text-blue-700 font-medium">
-                      Checked out &middot; {formatHours(todayRecord.totalHours)} today
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Today's summary */}
-              {todayRecord && (
-                <div className="grid grid-cols-3 gap-4 rounded-lg border p-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">First In</p>
-                    <p className="text-sm font-semibold">{formatTime(todayRecord.firstCheckIn)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Last Out</p>
-                    <p className="text-sm font-semibold">
-                      {todayRecord.lastCheckOut ? formatTime(todayRecord.lastCheckOut) : "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Hours</p>
-                    <p className="text-sm font-semibold">{formatHours(todayRecord.totalHours)}</p>
-                  </div>
-                </div>
-              )}
-
-              {locationError && (
-                <div className="flex items-center gap-2 text-sm text-destructive">
-                  <MapPin className="h-4 w-4" />
-                  {locationError}
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="flex gap-3">
-                {!isCheckedIn && (
-                  <Button onClick={handleCheckIn} disabled={isSubmitting || locationLoading}>
-                    <LogIn className="h-4 w-4" />
-                    {isSubmitting ? "Getting location..." : todayRecord ? "Check In Again" : "Check In"}
-                  </Button>
-                )}
-                {isCheckedIn && (
-                  <Button onClick={handleCheckOut} disabled={isSubmitting || locationLoading} variant="outline">
-                    <LogOut className="h-4 w-4" />
-                    {isSubmitting ? "Getting location..." : "Check Out"}
-                  </Button>
-                )}
-                {todayRecord && (
-                  <Button variant="outline" onClick={() => setShowMap(true)}>
-                    <Map className="h-4 w-4" /> View Map
-                  </Button>
-                )}
-              </div>
-
-              {/* Location log list */}
-              {todayLogs && todayLogs.length > 0 && (
-                <div className="space-y-2 pt-2 border-t">
-                  <p className="text-sm font-medium text-muted-foreground">Location Log</p>
-                  {todayLogs.map((log, idx) => (
-                    <div key={log._id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                          {idx + 1}
-                        </span>
-                        <div>
-                          <span className="font-medium">{formatTime(log.time)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={log.type === "check-in" ? "success" : "secondary"}>
-                          {log.type === "check-in" ? "Check In" : "Check Out"}
-                        </Badge>
-                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+    <div className="flex gap-6 h-full">
+      {/* Left Sidebar - Profile Card */}
+      <div className="w-80 space-y-4">
+        <Card className="overflow-hidden">
+          {/* Profile Header with gradient background */}
+          <div className="h-24 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 relative">
+            <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
+              {profile ? (
+                <Avatar
+                  src={profile.user.imageUrl}
+                  fallback={`${profile.user.firstName?.[0]}${profile.user.lastName?.[0]}`}
+                  className="h-24 w-24 border-4 border-white"
+                />
+              ) : (
+                <Skeleton className="h-24 w-24 rounded-full border-4 border-white" />
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
 
-      {/* Map dialog */}
+          <CardContent className="pt-16 pb-6 text-center space-y-4">
+            {profile ? (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    {profile.employee.employeeId} - {profile.user.firstName} {profile.user.lastName}
+                  </p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {profile.employee.designation}
+                  </p>
+                </div>
+
+                {/* Status Indicator */}
+                <div className="flex items-center justify-center gap-2">
+                  {isCheckedIn ? (
+                    <Badge variant="success" className="px-3 py-1">In</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="px-3 py-1">Out</Badge>
+                  )}
+                </div>
+
+                {/* Timer Display */}
+                <div className="text-center py-4">
+                  <div className="text-3xl font-bold font-mono">
+                    {String(elapsedTime.hours).padStart(2, '0')} : {String(elapsedTime.minutes).padStart(2, '0')} : {String(elapsedTime.seconds).padStart(2, '0')}
+                  </div>
+                  {isCheckedIn && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Time since check-in
+                    </p>
+                  )}
+                </div>
+
+                {/* Check-in/Check-out Button */}
+                <div className="flex flex-col gap-2">
+                  {!isCheckedIn ? (
+                    <Button 
+                      onClick={handleCheckIn} 
+                      disabled={isSubmitting || locationLoading}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      {isSubmitting ? "Checking in..." : "Check In"}
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleCheckOut} 
+                      disabled={isSubmitting || locationLoading}
+                      variant="destructive"
+                      className="w-full"
+                      size="lg"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      {isSubmitting ? "Checking out..." : "Check-out"}
+                    </Button>
+                  )}
+                  {todayRecord && (
+                    <Button variant="outline" onClick={() => setShowMap(true)} size="sm">
+                      <Map className="h-3 w-3 mr-2" /> Location Log
+                    </Button>
+                  )}
+                </div>
+
+                {locationError && (
+                  <div className="text-xs text-destructive flex items-center gap-1 justify-center">
+                    <MapPin className="h-3 w-3" />
+                    {locationError}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-4">
+                <Skeleton className="h-4 w-32 mx-auto" />
+                <Skeleton className="h-4 w-24 mx-auto" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Reporting To Card */}
+        {profile?.manager && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">Reporting To</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <Avatar
+                  src={profile.manager.imageUrl}
+                  fallback={`${profile.manager.firstName?.[0]}${profile.manager.lastName?.[0]}`}
+                  className="h-10 w-10"
+                />
+                <div>
+                  <p className="font-medium text-sm">
+                    {profile.manager.firstName} {profile.manager.lastName}
+                  </p>
+                  <Badge variant="success" className="text-xs mt-1">In</Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1">
+        <Tabs defaultValue="activities" className="w-full">
+          <TabsList className="justify-start border-b w-full rounded-none h-auto p-0 bg-transparent">
+            <TabsTrigger value="activities" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+              Activities
+            </TabsTrigger>
+            <TabsTrigger value="feeds" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+              Feeds
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="approvals" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+              Approvals
+            </TabsTrigger>
+            <TabsTrigger value="leave" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+              Leave
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+              Attendance
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="mt-6">
+            <TabsContent value="activities">
+              <ActivitiesTab profile={profile} todayRecord={todayRecord} />
+            </TabsContent>
+            <TabsContent value="feeds">
+              <FeedsTab />
+            </TabsContent>
+            <TabsContent value="profile">
+              <ProfileTab profile={profile} />
+            </TabsContent>
+            <TabsContent value="approvals">
+              <ApprovalsTab />
+            </TabsContent>
+            <TabsContent value="leave">
+              <LeaveTab />
+            </TabsContent>
+            <TabsContent value="attendance">
+              <AttendanceTab />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
+
+      {/* Map Dialog */}
       <LocationMapDialog
         open={showMap}
         onOpenChange={setShowMap}
         title="Today's Location Log"
         locations={mapLocations}
       />
+    </div>
+  );
+}
 
+function ActivitiesTab({ profile, todayRecord }: { profile: any; todayRecord: any }) {
+  return (
+    <div className="space-y-6">
+      {/* Greeting Card */}
+      <Card className="bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-100">
+        <CardContent className="flex items-center gap-4 py-6">
+          <div className="text-5xl">🧠</div>
+          <div className="flex-1">
+            <h2 className="text-xl font-semibold">
+              Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'} {profile?.user.firstName || 'there'}!
+            </h2>
+            <p className="text-muted-foreground">Have a productive day!</p>
+          </div>
+          <div className="text-6xl">☀️</div>
+        </CardContent>
+      </Card>
+
+      {/* Work Schedule Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Work Schedule
+          </CardTitle>
+          <CardDescription>
+            {new Date().toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })} - {new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
+              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <Clock className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">General</p>
+                <p className="text-sm text-muted-foreground">12:00 AM - 12:00 AM</p>
+              </div>
+            </div>
+            
+            {/* Week Timeline */}
+            <div className="flex justify-between items-center pt-4">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() - date.getDay() + i);
+                const dayNum = date.getDate();
+                const isToday = date.toDateString() === new Date().toDateString();
+                
+                return (
+                  <div key={day} className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">{day} {dayNum}</div>
+                    {isToday ? (
+                      <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                        {dayNum}
+                      </div>
+                    ) : (
+                      <div className="w-8 h-8 rounded-full border flex items-center justify-center text-sm">
+                        {dayNum}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Today's Stats */}
+      {todayRecord && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Today's Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 rounded-lg bg-muted">
+                <div className="text-2xl font-bold text-green-600">
+                  {todayRecord.firstCheckIn ? formatTime(todayRecord.firstCheckIn) : '--:--'}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">First Check-in</div>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-muted">
+                <div className="text-2xl font-bold text-blue-600">
+                  {todayRecord.lastCheckOut ? formatTime(todayRecord.lastCheckOut) : '--:--'}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Last Check-out</div>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-muted">
+                <div className="text-2xl font-bold text-purple-600">
+                  {formatHours(todayRecord.totalHours)}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Total Hours</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function FeedsTab() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="py-12 text-center">
+          <div className="text-5xl mb-4">📰</div>
+          <p className="text-muted-foreground">No feeds available at the moment</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ProfileTab({ profile }: { profile: any }) {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" /> Personal Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {profile ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              <InfoRow label="Full Name" value={`${profile.user.firstName} ${profile.user.lastName}`} />
+              <InfoRow label="Email" value={profile.user.email} />
+              <InfoRow label="Employee ID" value={profile.employee.employeeId} />
+              <InfoRow label="Department" value={profile.employee.department} />
+              <InfoRow label="Designation" value={profile.employee.designation} />
+              <InfoRow label="Date of Joining" value={profile.employee.dateOfJoining} />
+              {profile.employee.phone && <InfoRow label="Phone" value={profile.employee.phone} />}
+              {profile.employee.address && <InfoRow label="Address" value={profile.employee.address} />}
+              {profile.employee.emergencyContact && (
+                <InfoRow label="Emergency Contact" value={profile.employee.emergencyContact} />
+              )}
+            </div>
+          ) : (
+            <Skeleton className="h-64 w-full" />
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ApprovalsTab() {
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="py-12 text-center">
+          <div className="text-5xl mb-4">✅</div>
+          <p className="text-muted-foreground">No pending approvals</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function LeaveTab() {
+  const leaveBalances = useQuery(api.leaveBalances.getMyBalances);
+  const myRequests = useQuery(api.leaves.getMyRequests, {});
+  const pendingLeaves = myRequests?.filter((r) => r.status === "pending") ?? [];
+
+  return (
+    <div className="space-y-6">
       {/* Leave Balances */}
       <Card>
         <CardHeader>
@@ -231,7 +459,7 @@ function MySpaceTab() {
           {leaveBalances === undefined ? (
             <Skeleton className="h-32 w-full" />
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {leaveBalances.map((bal) => (
                 <div key={bal._id} className="rounded-lg border p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -282,105 +510,74 @@ function MySpaceTab() {
   );
 }
 
-function TeamTab() {
-  const teamMembers = useQuery(api.employees.getTeamMembers);
-  const teamOnLeave = useQuery(api.leaves.getTeamOnLeaveThisWeek);
+function AttendanceTab() {
+  const now = new Date();
+  const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const endOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()).padStart(2, "0")}`;
+  
+  const records = useQuery(api.attendance.getMyHistory, { startDate: startOfMonth, endDate: endOfMonth });
+  const totalHours = records?.reduce((sum, r) => sum + r.totalHours, 0) ?? 0;
 
   return (
     <div className="space-y-6">
-      {/* Team on leave this week */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">Days Present</div>
+            <div className="text-3xl font-bold text-green-600">{records?.length ?? 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">Total Hours</div>
+            <div className="text-3xl font-bold text-blue-600">{formatHours(totalHours)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">Average/Day</div>
+            <div className="text-3xl font-bold text-purple-600">
+              {records?.length ? formatHours(totalHours / records.length) : '0h'}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" /> Team On Leave This Week
-          </CardTitle>
+          <CardTitle>Recent Attendance</CardTitle>
         </CardHeader>
         <CardContent>
-          {teamOnLeave === undefined ? (
-            <Skeleton className="h-24 w-full" />
-          ) : teamOnLeave.length === 0 ? (
-            <p className="text-muted-foreground">No team members on leave this week.</p>
+          {records === undefined ? (
+            <Skeleton className="h-48 w-full" />
+          ) : records.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No attendance records this month</p>
           ) : (
             <div className="space-y-2">
-              {teamOnLeave.map((leave) => (
-                <div key={leave._id} className="flex items-center gap-3 rounded-lg border p-3">
-                  <Avatar
-                    src={leave.user?.imageUrl}
-                    fallback={`${leave.user?.firstName?.[0]}${leave.user?.lastName?.[0]}`}
-                    className="h-8 w-8"
-                  />
+              {records.slice(0, 5).map((rec) => (
+                <div key={rec._id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
-                    <p className="font-medium">{leave.user?.firstName} {leave.user?.lastName}</p>
+                    <p className="font-medium">{rec.date}</p>
                     <p className="text-sm text-muted-foreground">
-                      {leave.leaveType?.name}: {leave.startDate} - {leave.endDate}
+                      {rec.firstCheckIn && formatTime(rec.firstCheckIn)} - {rec.lastCheckOut ? formatTime(rec.lastCheckOut) : 'In Progress'}
                     </p>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Team Members */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" /> Team Members
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {teamMembers === undefined ? (
-            <Skeleton className="h-32 w-full" />
-          ) : teamMembers.length === 0 ? (
-            <p className="text-muted-foreground">No other team members found.</p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {teamMembers.map((member) => (
-                <div key={member._id} className="flex items-center gap-3 rounded-lg border p-4">
-                  <Avatar
-                    src={member.user?.imageUrl}
-                    fallback={`${member.user?.firstName?.[0]}${member.user?.lastName?.[0]}`}
-                  />
-                  <div>
-                    <p className="font-medium">{member.user?.firstName} {member.user?.lastName}</p>
-                    <p className="text-sm text-muted-foreground">{member.designation}</p>
+                  <div className="text-right">
+                    <Badge
+                      variant={
+                        rec.status === "present"
+                          ? "success"
+                          : rec.status === "half-day"
+                            ? "warning"
+                            : "destructive"
+                      }
+                    >
+                      {rec.status}
+                    </Badge>
+                    <p className="text-sm font-medium mt-1">{formatHours(rec.totalHours)}</p>
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function OrganizationTab() {
-  const profile = useQuery(api.employees.getMyProfile);
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" /> My Profile
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {profile === undefined ? (
-            <Skeleton className="h-32 w-full" />
-          ) : (
-            <div className="space-y-3">
-              <InfoRow label="Name" value={`${profile.user.firstName} ${profile.user.lastName}`} />
-              <InfoRow label="Email" value={profile.user.email} />
-              <InfoRow label="Employee ID" value={profile.employee.employeeId} />
-              <InfoRow label="Department" value={profile.employee.department} />
-              <InfoRow label="Designation" value={profile.employee.designation} />
-              <InfoRow label="Date of Joining" value={profile.employee.dateOfJoining} />
-              {profile.manager && (
-                <InfoRow label="Manager" value={`${profile.manager.firstName} ${profile.manager.lastName}`} />
-              )}
             </div>
           )}
         </CardContent>
@@ -391,9 +588,9 @@ function OrganizationTab() {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between py-1 border-b border-dashed last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{value}</span>
+    <div className="space-y-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <p className="text-sm font-medium">{value}</p>
     </div>
   );
 }
