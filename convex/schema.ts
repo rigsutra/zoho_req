@@ -118,4 +118,17 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_employeeId_status", ["employeeId", "status"])
     .index("by_startDate", ["startDate"]),
+
+  holidays: defineTable({
+    name: v.string(),
+    date: v.string(),
+    description: v.optional(v.string()),
+    location: v.optional(v.string()), // Empty string means applies to all locations
+    isActive: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.string(),
+  })
+    .index("by_date", ["date"])
+    .index("by_location", ["location"])
+    .index("by_isActive", ["isActive"]),
 });

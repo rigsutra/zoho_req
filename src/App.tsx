@@ -9,6 +9,7 @@ import { EmployeesPage } from "@/pages/admin/EmployeesPage";
 import { EmployeeDetailPage } from "@/pages/admin/EmployeeDetailPage";
 import { AttendancePage as AdminAttendancePage } from "@/pages/admin/AttendancePage";
 import { LeaveManagementPage } from "@/pages/admin/LeaveManagementPage";
+import { HolidaysPage } from "@/pages/admin/HolidaysPage";
 import { EmployeeHome } from "@/pages/employee/EmployeeHome";
 import { LeaveTrackerPage } from "@/pages/employee/LeaveTrackerPage";
 import { TimeTrackerPage } from "@/pages/employee/TimeTrackerPage";
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="employees/:id" element={<EmployeeDetailPage />} />
           <Route path="attendance" element={<AdminAttendancePage />} />
           <Route path="leaves" element={<LeaveManagementPage />} />
+          <Route path="holidays" element={<HolidaysPage />} />
         </Route>
 
         <Route

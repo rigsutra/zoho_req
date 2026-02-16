@@ -26,7 +26,12 @@ export function Logo({ className, showText = true, size = "md" }: LogoProps) {
       </div>
       {showText && (
         <div>
-          <h1 className={cn("font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent", sizes.text)}>
+          <h1
+            className={cn(
+              "font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent",
+              sizes.text,
+            )}
+          >
             People of Podtech
           </h1>
         </div>

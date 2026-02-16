@@ -12,6 +12,7 @@ import type * as attendance from "../attendance.js";
 import type * as crons from "../crons.js";
 import type * as employees from "../employees.js";
 import type * as helpers from "../helpers.js";
+import type * as holidays from "../holidays.js";
 import type * as http from "../http.js";
 import type * as leaveBalances from "../leaveBalances.js";
 import type * as leaveTypes from "../leaveTypes.js";
@@ -29,6 +30,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   employees: typeof employees;
   helpers: typeof helpers;
+  holidays: typeof holidays;
   http: typeof http;
   leaveBalances: typeof leaveBalances;
   leaveTypes: typeof leaveTypes;
