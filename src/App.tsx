@@ -14,6 +14,7 @@ import { LeaveTrackerPage } from "@/pages/employee/LeaveTrackerPage";
 import { TimeTrackerPage } from "@/pages/employee/TimeTrackerPage";
 import { AttendancePage as EmployeeAttendancePage } from "@/pages/employee/AttendancePage";
 import { useRole } from "@/hooks/useRole";
+import { useStoreUser } from "@/hooks/useStoreUser";
 import { useAuth } from "@clerk/clerk-react";
 
 function RootRedirect() {
@@ -26,9 +27,15 @@ function RootRedirect() {
   return <Navigate to="/employee" replace />;
 }
 
+function UserSync() {
+  useStoreUser();
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <UserSync />
       <Routes>
         <Route path="/sign-in" element={<SignInPage />} />
 

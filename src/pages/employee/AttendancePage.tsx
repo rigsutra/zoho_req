@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableHeader,
@@ -14,7 +15,10 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LocationMapDialog } from "@/components/shared/LocationMap";
 import { formatTime, formatHours } from "@/lib/date-utils";
+import { Map } from "lucide-react";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 export function AttendancePage() {
   const now = new Date();
@@ -23,12 +27,26 @@ export function AttendancePage() {
 
   const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(defaultEnd);
+  const [mapAttendanceId, setMapAttendanceId] = useState<Id<"attendance"> | null>(null);
+  const [mapTitle, setMapTitle] = useState("");
 
   const records = useQuery(api.attendance.getMyHistory, { startDate, endDate });
+  const logs = useQuery(
+    api.attendance.getLogs,
+    mapAttendanceId ? { attendanceId: mapAttendanceId } : "skip"
+  );
 
-  const totalHours = records?.reduce((sum, r) => sum + (r.totalHours ?? 0), 0) ?? 0;
-  const presentDays = records?.filter((r) => r.status === "present").length ?? 0;
-  const halfDays = records?.filter((r) => r.status === "half-day").length ?? 0;
+  const totalHours = records?.reduce((sum, r) => sum + r.totalHours, 0) ?? 0;
+  const uniqueDays = new Set(records?.map((r) => r.date) ?? []);
+
+  const mapLocations = (logs ?? []).map((log, idx) => ({
+    latitude: log.location.latitude,
+    longitude: log.location.longitude,
+    accuracy: log.location.accuracy,
+    label: `#${idx + 1}`,
+    time: formatTime(log.time),
+    type: log.type as "check-in" | "check-out",
+  }));
 
   return (
     <div className="space-y-6">
@@ -46,23 +64,17 @@ export function AttendancePage() {
       </div>
 
       {/* Summary */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Total Days</div>
-            <div className="text-2xl font-bold">{records?.length ?? 0}</div>
+            <div className="text-sm text-muted-foreground">Days Active</div>
+            <div className="text-2xl font-bold">{uniqueDays.size}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Present</div>
-            <div className="text-2xl font-bold text-green-600">{presentDays}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm text-muted-foreground">Half Days</div>
-            <div className="text-2xl font-bold text-yellow-600">{halfDays}</div>
+            <div className="text-sm text-muted-foreground">Total Records</div>
+            <div className="text-2xl font-bold text-green-600">{records?.length ?? 0}</div>
           </CardContent>
         </Card>
         <Card>
@@ -89,10 +101,11 @@ export function AttendancePage() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Day</TableHead>
-                  <TableHead>Check In</TableHead>
-                  <TableHead>Check Out</TableHead>
+                  <TableHead>First In</TableHead>
+                  <TableHead>Last Out</TableHead>
                   <TableHead>Hours</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Location Log</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -102,13 +115,11 @@ export function AttendancePage() {
                     <TableCell>
                       {new Date(rec.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" })}
                     </TableCell>
-                    <TableCell>{formatTime(rec.checkInTime)}</TableCell>
+                    <TableCell>{formatTime(rec.firstCheckIn)}</TableCell>
                     <TableCell>
-                      {rec.checkOutTime ? formatTime(rec.checkOutTime) : "—"}
+                      {rec.lastCheckOut ? formatTime(rec.lastCheckOut) : "—"}
                     </TableCell>
-                    <TableCell>
-                      {rec.totalHours ? formatHours(rec.totalHours) : "—"}
-                    </TableCell>
+                    <TableCell>{formatHours(rec.totalHours)}</TableCell>
                     <TableCell>
                       <Badge
                         variant={
@@ -122,6 +133,18 @@ export function AttendancePage() {
                         {rec.status}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setMapAttendanceId(rec._id);
+                          setMapTitle(`Location Log — ${rec.date}`);
+                        }}
+                      >
+                        <Map className="h-4 w-4" /> View Map
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -129,6 +152,13 @@ export function AttendancePage() {
           )}
         </CardContent>
       </Card>
+
+      <LocationMapDialog
+        open={!!mapAttendanceId}
+        onOpenChange={() => setMapAttendanceId(null)}
+        title={mapTitle}
+        locations={mapLocations}
+      />
     </div>
   );
 }

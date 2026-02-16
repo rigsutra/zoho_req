@@ -39,31 +39,34 @@ export default defineSchema({
   attendance: defineTable({
     employeeId: v.id("employees"),
     date: v.string(),
-    checkInTime: v.string(),
-    checkOutTime: v.optional(v.string()),
-    checkInLocation: v.object({
-      latitude: v.number(),
-      longitude: v.number(),
-      accuracy: v.number(),
-    }),
-    checkOutLocation: v.optional(
-      v.object({
-        latitude: v.number(),
-        longitude: v.number(),
-        accuracy: v.number(),
-      })
-    ),
-    totalHours: v.optional(v.number()),
+    firstCheckIn: v.string(),
+    lastCheckIn: v.string(),
+    lastCheckOut: v.optional(v.string()),
+    totalHours: v.number(),
     status: v.union(
       v.literal("present"),
       v.literal("half-day"),
       v.literal("absent")
     ),
-    notes: v.optional(v.string()),
+    isCheckedIn: v.boolean(),
   })
     .index("by_employeeId", ["employeeId"])
     .index("by_date", ["date"])
     .index("by_employeeId_date", ["employeeId", "date"]),
+
+  attendanceLogs: defineTable({
+    attendanceId: v.id("attendance"),
+    employeeId: v.id("employees"),
+    type: v.union(v.literal("check-in"), v.literal("check-out")),
+    time: v.string(),
+    location: v.object({
+      latitude: v.number(),
+      longitude: v.number(),
+      accuracy: v.number(),
+    }),
+  })
+    .index("by_attendanceId", ["attendanceId"])
+    .index("by_employeeId", ["employeeId"]),
 
   leaveTypes: defineTable({
     name: v.string(),

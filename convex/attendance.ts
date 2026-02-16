@@ -2,6 +2,8 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAdmin, getCurrentEmployee } from "./helpers";
 
+// Check in — creates or updates the single daily attendance record,
+// and always inserts a location log entry.
 export const checkIn = mutation({
   args: {
     latitude: v.number(),
@@ -12,7 +14,9 @@ export const checkIn = mutation({
     const { employee } = await getCurrentEmployee(ctx);
     const now = new Date();
     const today = now.toISOString().split("T")[0]!;
+    const timeISO = now.toISOString();
 
+    // Find existing daily record
     const existing = await ctx.db
       .query("attendance")
       .withIndex("by_employeeId_date", (q) =>
@@ -20,24 +24,49 @@ export const checkIn = mutation({
       )
       .unique();
 
-    if (existing) {
-      throw new Error("Already checked in today");
+    if (existing?.isCheckedIn) {
+      throw new Error(
+        "You are already checked in. Please check out before checking in again."
+      );
     }
 
-    return await ctx.db.insert("attendance", {
+    let attendanceId;
+    if (existing) {
+      // Update existing daily record
+      await ctx.db.patch(existing._id, {
+        lastCheckIn: timeISO,
+        isCheckedIn: true,
+      });
+      attendanceId = existing._id;
+    } else {
+      // Create new daily record
+      attendanceId = await ctx.db.insert("attendance", {
+        employeeId: employee._id,
+        date: today,
+        firstCheckIn: timeISO,
+        lastCheckIn: timeISO,
+        totalHours: 0,
+        status: "present",
+        isCheckedIn: true,
+      });
+    }
+
+    // Insert location log
+    await ctx.db.insert("attendanceLogs", {
+      attendanceId,
       employeeId: employee._id,
-      date: today,
-      checkInTime: now.toISOString(),
-      checkInLocation: {
+      type: "check-in",
+      time: timeISO,
+      location: {
         latitude: args.latitude,
         longitude: args.longitude,
         accuracy: args.accuracy,
       },
-      status: "present",
     });
   },
 });
 
+// Check out — updates the daily record with hours and inserts a location log.
 export const checkOut = mutation({
   args: {
     latitude: v.number(),
@@ -47,6 +76,8 @@ export const checkOut = mutation({
   handler: async (ctx, args) => {
     const { employee } = await getCurrentEmployee(ctx);
     const today = new Date().toISOString().split("T")[0]!;
+    const now = new Date();
+    const timeISO = now.toISOString();
 
     const record = await ctx.db
       .query("attendance")
@@ -55,29 +86,41 @@ export const checkOut = mutation({
       )
       .unique();
 
-    if (!record) throw new Error("No check-in found for today");
-    if (record.checkOutTime) throw new Error("Already checked out today");
+    if (!record || !record.isCheckedIn) {
+      throw new Error("You are not checked in.");
+    }
 
-    const checkOutTime = new Date();
-    const checkInTime = new Date(record.checkInTime);
-    const totalHours =
-      (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
-
-    const status = totalHours < 4 ? "half-day" : "present";
+    // Calculate hours for this session (lastCheckIn → now)
+    const sessionHours =
+      (now.getTime() - new Date(record.lastCheckIn).getTime()) /
+      (1000 * 60 * 60);
+    const newTotal =
+      Math.round((record.totalHours + sessionHours) * 100) / 100;
+    const status = newTotal < 4 ? "half-day" : "present";
 
     await ctx.db.patch(record._id, {
-      checkOutTime: checkOutTime.toISOString(),
-      checkOutLocation: {
+      lastCheckOut: timeISO,
+      totalHours: newTotal,
+      status,
+      isCheckedIn: false,
+    });
+
+    // Insert location log
+    await ctx.db.insert("attendanceLogs", {
+      attendanceId: record._id,
+      employeeId: employee._id,
+      type: "check-out",
+      time: timeISO,
+      location: {
         latitude: args.latitude,
         longitude: args.longitude,
         accuracy: args.accuracy,
       },
-      totalHours: Math.round(totalHours * 100) / 100,
-      status,
     });
   },
 });
 
+// Returns today's single attendance record (or null).
 export const getTodayStatus = query({
   args: {},
   handler: async (ctx) => {
@@ -89,6 +132,19 @@ export const getTodayStatus = query({
         q.eq("employeeId", employee._id).eq("date", today)
       )
       .unique();
+  },
+});
+
+// Returns all location logs for a given attendance record.
+export const getLogs = query({
+  args: { attendanceId: v.id("attendance") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("attendanceLogs")
+      .withIndex("by_attendanceId", (q) =>
+        q.eq("attendanceId", args.attendanceId)
+      )
+      .collect();
   },
 });
 
@@ -143,5 +199,19 @@ export const getByEmployee = query({
     return records.filter(
       (r) => r.date >= args.startDate && r.date <= args.endDate
     );
+  },
+});
+
+// Admin: get logs for any attendance record.
+export const getLogsByAttendanceId = query({
+  args: { attendanceId: v.id("attendance") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    return await ctx.db
+      .query("attendanceLogs")
+      .withIndex("by_attendanceId", (q) =>
+        q.eq("attendanceId", args.attendanceId)
+      )
+      .collect();
   },
 });

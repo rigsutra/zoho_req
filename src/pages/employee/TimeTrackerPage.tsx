@@ -3,12 +3,12 @@ import { api } from "../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatTime, formatHours, getTodayISO } from "@/lib/date-utils";
+import { formatTime, formatHours } from "@/lib/date-utils";
 import { Clock, TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export function TimeTrackerPage() {
-  const todayStatus = useQuery(api.attendance.getTodayStatus);
+  const todayRecord = useQuery(api.attendance.getTodayStatus);
 
   const now = new Date();
   const weekStart = new Date(now);
@@ -29,9 +29,9 @@ export function TimeTrackerPage() {
     endDate: monthEnd,
   });
 
-  const weeklyTotal = weekHistory?.reduce((sum, r) => sum + (r.totalHours ?? 0), 0) ?? 0;
-  const monthlyTotal = monthHistory?.reduce((sum, r) => sum + (r.totalHours ?? 0), 0) ?? 0;
-  const daysWorked = monthHistory?.filter((r) => r.totalHours).length ?? 0;
+  const weeklyTotal = weekHistory?.reduce((sum, r) => sum + r.totalHours, 0) ?? 0;
+  const monthlyTotal = monthHistory?.reduce((sum, r) => sum + r.totalHours, 0) ?? 0;
+  const daysWorked = monthHistory?.filter((r) => r.totalHours > 0).length ?? 0;
   const avgHours = daysWorked > 0 ? monthlyTotal / daysWorked : 0;
 
   return (
@@ -46,32 +46,32 @@ export function TimeTrackerPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {todayStatus === undefined ? (
+          {todayRecord === undefined ? (
             <Skeleton className="h-20 w-full" />
-          ) : !todayStatus ? (
+          ) : !todayRecord ? (
             <p className="text-muted-foreground">No check-in recorded today.</p>
           ) : (
             <div className="flex items-center gap-6">
               <div>
-                <p className="text-sm text-muted-foreground">Check In</p>
-                <p className="text-lg font-semibold">{formatTime(todayStatus.checkInTime)}</p>
+                <p className="text-sm text-muted-foreground">First In</p>
+                <p className="text-lg font-semibold">{formatTime(todayRecord.firstCheckIn)}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Check Out</p>
+                <p className="text-sm text-muted-foreground">Last Out</p>
                 <p className="text-lg font-semibold">
-                  {todayStatus.checkOutTime ? formatTime(todayStatus.checkOutTime) : "—"}
+                  {todayRecord.lastCheckOut ? formatTime(todayRecord.lastCheckOut) : "—"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Hours</p>
                 <p className="text-lg font-semibold">
-                  {todayStatus.totalHours
-                    ? formatHours(todayStatus.totalHours)
-                    : <LiveTimer checkInTime={todayStatus.checkInTime} />}
+                  {todayRecord.isCheckedIn
+                    ? <LiveTimer baseHours={todayRecord.totalHours} checkInTime={todayRecord.lastCheckIn} />
+                    : formatHours(todayRecord.totalHours)}
                 </p>
               </div>
-              <Badge variant={todayStatus.status === "present" ? "success" : todayStatus.status === "half-day" ? "warning" : "secondary"}>
-                {todayStatus.status}
+              <Badge variant={todayRecord.status === "present" ? "success" : todayRecord.status === "half-day" ? "warning" : "secondary"}>
+                {todayRecord.isCheckedIn ? "Working" : todayRecord.status}
               </Badge>
             </div>
           )}
@@ -87,7 +87,7 @@ export function TimeTrackerPage() {
           <CardContent>
             <div className="text-3xl font-bold">{formatHours(weeklyTotal)}</div>
             <p className="text-sm text-muted-foreground mt-1">
-              {weekHistory?.filter((r) => r.totalHours).length ?? 0} days worked
+              {weekHistory?.filter((r) => r.totalHours > 0).length ?? 0} days worked
             </p>
           </CardContent>
         </Card>
@@ -125,19 +125,19 @@ export function TimeTrackerPage() {
             <div className="space-y-3">
               {weekHistory.map((rec) => (
                 <div key={rec._id} className="flex items-center gap-4">
-                  <span className="w-24 text-sm font-medium">
+                  <span className="w-28 text-sm font-medium">
                     {new Date(rec.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                   </span>
                   <div className="flex-1">
                     <div className="h-6 rounded bg-muted overflow-hidden">
                       <div
                         className="h-full rounded bg-primary transition-all"
-                        style={{ width: `${Math.min((rec.totalHours ?? 0) / 10 * 100, 100)}%` }}
+                        style={{ width: `${Math.min(rec.totalHours / 10 * 100, 100)}%` }}
                       />
                     </div>
                   </div>
                   <span className="w-16 text-right text-sm font-medium">
-                    {rec.totalHours ? formatHours(rec.totalHours) : "—"}
+                    {rec.totalHours > 0 ? formatHours(rec.totalHours) : "—"}
                   </span>
                 </div>
               ))}
@@ -149,17 +149,16 @@ export function TimeTrackerPage() {
   );
 }
 
-function LiveTimer({ checkInTime }: { checkInTime: string }) {
+function LiveTimer({ baseHours, checkInTime }: { baseHours: number; checkInTime: string }) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     const checkIn = new Date(checkInTime).getTime();
-    const interval = setInterval(() => {
-      setElapsed((Date.now() - checkIn) / (1000 * 60 * 60));
-    }, 60000);
-    setElapsed((Date.now() - checkIn) / (1000 * 60 * 60));
+    const update = () => setElapsed((Date.now() - checkIn) / (1000 * 60 * 60));
+    update();
+    const interval = setInterval(update, 60000);
     return () => clearInterval(interval);
   }, [checkInTime]);
 
-  return <span className="text-green-600">{formatHours(elapsed)}</span>;
+  return <span className="text-green-600">{formatHours(baseHours + elapsed)}</span>;
 }

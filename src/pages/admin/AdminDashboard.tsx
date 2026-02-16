@@ -3,6 +3,7 @@ import { api } from "../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Clock, CalendarDays, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatTime } from "@/lib/date-utils";
 
 export function AdminDashboard() {
   const employees = useQuery(api.employees.listAll);
@@ -30,12 +31,12 @@ export function AdminDashboard() {
 
   const activeEmployees = employees.filter((e) => e.status === "active");
   const presentToday = todayAttendance.length;
-  const checkedOut = todayAttendance.filter((a) => a.checkOutTime).length;
+  const currentlyWorking = todayAttendance.filter((a) => a.isCheckedIn).length;
 
   const stats = [
     { label: "Total Employees", value: activeEmployees.length, icon: Users, color: "text-blue-600" },
     { label: "Present Today", value: presentToday, icon: Clock, color: "text-green-600" },
-    { label: "Checked Out", value: checkedOut, icon: CalendarDays, color: "text-orange-600" },
+    { label: "Currently In", value: currentlyWorking, icon: CalendarDays, color: "text-orange-600" },
     { label: "Pending Leaves", value: pendingLeaves.length, icon: AlertCircle, color: "text-red-600" },
   ];
 
@@ -98,12 +99,12 @@ export function AdminDashboard() {
                       {record.user?.firstName} {record.user?.lastName}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      In: {new Date(record.checkInTime).toLocaleTimeString()}
-                      {record.checkOutTime && ` | Out: ${new Date(record.checkOutTime).toLocaleTimeString()}`}
+                      In: {formatTime(record.firstCheckIn)}
+                      {record.lastCheckOut && ` | Out: ${formatTime(record.lastCheckOut)}`}
                     </p>
                   </div>
-                  <span className={`text-sm font-medium ${record.checkOutTime ? "text-green-600" : "text-blue-600"}`}>
-                    {record.checkOutTime ? `${record.totalHours?.toFixed(1)}h` : "Working..."}
+                  <span className={`text-sm font-medium ${record.isCheckedIn ? "text-green-600" : "text-blue-600"}`}>
+                    {record.isCheckedIn ? "Working..." : `${record.totalHours.toFixed(1)}h`}
                   </span>
                 </div>
               ))}

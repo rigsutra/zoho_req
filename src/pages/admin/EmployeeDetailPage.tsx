@@ -105,11 +105,11 @@ export function EmployeeDetailPage() {
                 <div key={rec._id} className="flex items-center justify-between rounded-lg border p-3">
                   <span className="font-medium">{rec.date}</span>
                   <div className="text-sm text-muted-foreground">
-                    {new Date(rec.checkInTime).toLocaleTimeString()}
-                    {rec.checkOutTime ? ` - ${new Date(rec.checkOutTime).toLocaleTimeString()}` : " (still working)"}
+                    {new Date(rec.firstCheckIn).toLocaleTimeString()}
+                    {rec.lastCheckOut ? ` - ${new Date(rec.lastCheckOut).toLocaleTimeString()}` : " (still working)"}
                   </div>
                   <Badge variant={rec.status === "present" ? "success" : "warning"}>
-                    {rec.status} {rec.totalHours ? `(${rec.totalHours.toFixed(1)}h)` : ""}
+                    {rec.status} ({rec.totalHours.toFixed(1)}h)
                   </Badge>
                 </div>
               ))}

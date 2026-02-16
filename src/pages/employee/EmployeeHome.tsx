@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { LocationMapDialog } from "@/components/shared/LocationMap";
 import { formatTime, formatHours } from "@/lib/date-utils";
 import {
   MapPin,
@@ -17,6 +18,7 @@ import {
   Calendar,
   Users,
   Building2,
+  Map,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -39,7 +41,11 @@ export function EmployeeHome() {
 }
 
 function MySpaceTab() {
-  const todayStatus = useQuery(api.attendance.getTodayStatus);
+  const todayRecord = useQuery(api.attendance.getTodayStatus);
+  const todayLogs = useQuery(
+    api.attendance.getLogs,
+    todayRecord ? { attendanceId: todayRecord._id } : "skip"
+  );
   const leaveBalances = useQuery(api.leaveBalances.getMyBalances);
   const myRequests = useQuery(api.leaves.getMyRequests, {});
   const checkIn = useMutation(api.attendance.checkIn);
@@ -47,19 +53,15 @@ function MySpaceTab() {
   const { getLocation, isLoading: locationLoading, error: locationError } = useGeolocation();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
-  const isCheckedIn = !!todayStatus && !todayStatus.checkOutTime;
-  const isCheckedOut = !!todayStatus?.checkOutTime;
+  const isCheckedIn = todayRecord?.isCheckedIn ?? false;
 
   const handleCheckIn = async () => {
     setIsSubmitting(true);
     try {
       const loc = await getLocation();
-      await checkIn({
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-        accuracy: loc.accuracy,
-      });
+      await checkIn({ latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy });
       toast({ title: "Checked in successfully!", variant: "success" });
     } catch (err: unknown) {
       toast({ title: "Check-in failed", description: (err as Error).message, variant: "destructive" });
@@ -72,11 +74,7 @@ function MySpaceTab() {
     setIsSubmitting(true);
     try {
       const loc = await getLocation();
-      await checkOut({
-        latitude: loc.latitude,
-        longitude: loc.longitude,
-        accuracy: loc.accuracy,
-      });
+      await checkOut({ latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy });
       toast({ title: "Checked out successfully!", variant: "success" });
     } catch (err: unknown) {
       toast({ title: "Check-out failed", description: (err as Error).message, variant: "destructive" });
@@ -85,11 +83,20 @@ function MySpaceTab() {
     }
   };
 
+  // Build map locations from logs
+  const mapLocations = (todayLogs ?? []).map((log, idx) => ({
+    latitude: log.location.latitude,
+    longitude: log.location.longitude,
+    accuracy: log.location.accuracy,
+    label: `#${idx + 1}`,
+    time: formatTime(log.time),
+    type: log.type as "check-in" | "check-out",
+  }));
+
   const pendingLeaves = myRequests?.filter((r) => r.status === "pending") ?? [];
 
   return (
     <div className="space-y-6">
-      {/* Check-in/Check-out Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -100,12 +107,13 @@ function MySpaceTab() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {todayStatus === undefined ? (
+          {todayRecord === undefined ? (
             <Skeleton className="h-24 w-full" />
           ) : (
             <div className="space-y-4">
+              {/* Current status */}
               <div className="flex items-center gap-4">
-                {!todayStatus ? (
+                {!todayRecord ? (
                   <div className="flex items-center gap-3">
                     <div className="h-3 w-3 rounded-full bg-gray-400" />
                     <span className="text-muted-foreground">Not checked in yet</span>
@@ -114,19 +122,38 @@ function MySpaceTab() {
                   <div className="flex items-center gap-3">
                     <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
                     <span className="text-green-700 font-medium">
-                      Working since {formatTime(todayStatus.checkInTime)}
+                      Working since {formatTime(todayRecord.lastCheckIn)}
                     </span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
                     <div className="h-3 w-3 rounded-full bg-blue-500" />
                     <span className="text-blue-700 font-medium">
-                      Completed: {formatTime(todayStatus.checkInTime)} - {formatTime(todayStatus.checkOutTime!)}
-                      {todayStatus.totalHours && ` (${formatHours(todayStatus.totalHours)})`}
+                      Checked out &middot; {formatHours(todayRecord.totalHours)} today
                     </span>
                   </div>
                 )}
               </div>
+
+              {/* Today's summary */}
+              {todayRecord && (
+                <div className="grid grid-cols-3 gap-4 rounded-lg border p-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">First In</p>
+                    <p className="text-sm font-semibold">{formatTime(todayRecord.firstCheckIn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Last Out</p>
+                    <p className="text-sm font-semibold">
+                      {todayRecord.lastCheckOut ? formatTime(todayRecord.lastCheckOut) : "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Hours</p>
+                    <p className="text-sm font-semibold">{formatHours(todayRecord.totalHours)}</p>
+                  </div>
+                </div>
+              )}
 
               {locationError && (
                 <div className="flex items-center gap-2 text-sm text-destructive">
@@ -135,11 +162,12 @@ function MySpaceTab() {
                 </div>
               )}
 
+              {/* Action buttons */}
               <div className="flex gap-3">
-                {!todayStatus && (
+                {!isCheckedIn && (
                   <Button onClick={handleCheckIn} disabled={isSubmitting || locationLoading}>
                     <LogIn className="h-4 w-4" />
-                    {isSubmitting ? "Getting location..." : "Check In"}
+                    {isSubmitting ? "Getting location..." : todayRecord ? "Check In Again" : "Check In"}
                   </Button>
                 )}
                 {isCheckedIn && (
@@ -148,21 +176,49 @@ function MySpaceTab() {
                     {isSubmitting ? "Getting location..." : "Check Out"}
                   </Button>
                 )}
-                {isCheckedOut && (
-                  <Badge variant="success">Day Complete</Badge>
+                {todayRecord && (
+                  <Button variant="outline" onClick={() => setShowMap(true)}>
+                    <Map className="h-4 w-4" /> View Map
+                  </Button>
                 )}
               </div>
 
-              {todayStatus?.checkInLocation && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  Check-in: {todayStatus.checkInLocation.latitude.toFixed(4)}, {todayStatus.checkInLocation.longitude.toFixed(4)}
-                </p>
+              {/* Location log list */}
+              {todayLogs && todayLogs.length > 0 && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-sm font-medium text-muted-foreground">Location Log</p>
+                  {todayLogs.map((log, idx) => (
+                    <div key={log._id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                          {idx + 1}
+                        </span>
+                        <div>
+                          <span className="font-medium">{formatTime(log.time)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={log.type === "check-in" ? "success" : "secondary"}>
+                          {log.type === "check-in" ? "Check In" : "Check Out"}
+                        </Badge>
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Map dialog */}
+      <LocationMapDialog
+        open={showMap}
+        onOpenChange={setShowMap}
+        title="Today's Location Log"
+        locations={mapLocations}
+      />
 
       {/* Leave Balances */}
       <Card>

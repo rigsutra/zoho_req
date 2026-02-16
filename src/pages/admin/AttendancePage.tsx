@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableHeader,
@@ -14,11 +15,34 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTodayISO } from "@/lib/date-utils";
+import { LocationMapDialog } from "@/components/shared/LocationMap";
+import { formatTime, formatHours, getTodayISO } from "@/lib/date-utils";
+import { Map } from "lucide-react";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 export function AttendancePage() {
   const [date, setDate] = useState(getTodayISO());
   const records = useQuery(api.attendance.getAllByDate, { date });
+  const [mapAttendanceId, setMapAttendanceId] = useState<Id<"attendance"> | null>(null);
+  const [mapTitle, setMapTitle] = useState("");
+
+  const logs = useQuery(
+    api.attendance.getLogsByAttendanceId,
+    mapAttendanceId ? { attendanceId: mapAttendanceId } : "skip"
+  );
+
+  const uniqueEmployees = new Set(records?.map((r) => r.employeeId) ?? []);
+  const totalHours = records?.reduce((sum, r) => sum + r.totalHours, 0) ?? 0;
+  const checkedIn = records?.filter((r) => r.isCheckedIn).length ?? 0;
+
+  const mapLocations = (logs ?? []).map((log, idx) => ({
+    latitude: log.location.latitude,
+    longitude: log.location.longitude,
+    accuracy: log.location.accuracy,
+    label: `#${idx + 1}`,
+    time: formatTime(log.time),
+    type: log.type as "check-in" | "check-out",
+  }));
 
   return (
     <div className="space-y-6">
@@ -32,6 +56,34 @@ export function AttendancePage() {
           onChange={(e) => setDate(e.target.value)}
           className="w-48"
         />
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">Employees Present</div>
+            <div className="text-2xl font-bold">{uniqueEmployees.size}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">Currently In</div>
+            <div className="text-2xl font-bold text-green-600">{checkedIn}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">Checked Out</div>
+            <div className="text-2xl font-bold text-blue-600">{uniqueEmployees.size - checkedIn}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-sm text-muted-foreground">Total Hours</div>
+            <div className="text-2xl font-bold">{formatHours(totalHours)}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -52,11 +104,11 @@ export function AttendancePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
-                  <TableHead>Check In</TableHead>
-                  <TableHead>Check Out</TableHead>
+                  <TableHead>First In</TableHead>
+                  <TableHead>Last Out</TableHead>
                   <TableHead>Hours</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Location (In)</TableHead>
+                  <TableHead>Location Log</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -65,22 +117,27 @@ export function AttendancePage() {
                     <TableCell className="font-medium">
                       {rec.user?.firstName} {rec.user?.lastName}
                     </TableCell>
-                    <TableCell>{new Date(rec.checkInTime).toLocaleTimeString()}</TableCell>
+                    <TableCell>{formatTime(rec.firstCheckIn)}</TableCell>
                     <TableCell>
-                      {rec.checkOutTime
-                        ? new Date(rec.checkOutTime).toLocaleTimeString()
-                        : "—"}
+                      {rec.lastCheckOut ? formatTime(rec.lastCheckOut) : "—"}
                     </TableCell>
+                    <TableCell>{formatHours(rec.totalHours)}</TableCell>
                     <TableCell>
-                      {rec.totalHours ? `${rec.totalHours.toFixed(1)}h` : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={rec.status === "present" ? "success" : rec.status === "half-day" ? "warning" : "destructive"}>
-                        {rec.status}
+                      <Badge variant={rec.isCheckedIn ? "success" : rec.status === "present" ? "success" : rec.status === "half-day" ? "warning" : "destructive"}>
+                        {rec.isCheckedIn ? "Working" : rec.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {rec.checkInLocation.latitude.toFixed(4)}, {rec.checkInLocation.longitude.toFixed(4)}
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setMapAttendanceId(rec._id);
+                          setMapTitle(`Location Log — ${rec.user?.firstName ?? ""} ${rec.user?.lastName ?? ""} (${date})`);
+                        }}
+                      >
+                        <Map className="h-4 w-4" /> View Map
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -89,6 +146,13 @@ export function AttendancePage() {
           )}
         </CardContent>
       </Card>
+
+      <LocationMapDialog
+        open={!!mapAttendanceId}
+        onOpenChange={() => setMapAttendanceId(null)}
+        title={mapTitle}
+        locations={mapLocations}
+      />
     </div>
   );
 }

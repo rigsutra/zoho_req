@@ -71,6 +71,43 @@ export const getMeWithEmployee = query({
   },
 });
 
+export const ensureMe = mutation({
+  args: {
+    email: v.string(),
+    firstName: v.string(),
+    lastName: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        email: args.email,
+        firstName: args.firstName,
+        lastName: args.lastName ?? "",
+        imageUrl: args.imageUrl ?? undefined,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("users", {
+      clerkId: identity.subject,
+      email: args.email,
+      firstName: args.firstName,
+      lastName: args.lastName ?? "",
+      imageUrl: args.imageUrl ?? undefined,
+      role: "employee",
+    });
+  },
+});
+
 export const setRole = mutation({
   args: {
     userId: v.id("users"),
