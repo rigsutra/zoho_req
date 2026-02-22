@@ -69,13 +69,13 @@ export function AttendancePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Currently In</div>
-            <div className="text-2xl font-bold text-green-600">{checkedIn}</div>
+            <div className="text-2xl font-bold">{checkedIn}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Checked Out</div>
-            <div className="text-2xl font-bold text-blue-600">{uniqueEmployees.size - checkedIn}</div>
+            <div className="text-2xl font-bold">{uniqueEmployees.size - checkedIn}</div>
           </CardContent>
         </Card>
         <Card>

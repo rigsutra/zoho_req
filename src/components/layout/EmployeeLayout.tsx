@@ -4,10 +4,10 @@ import { Header } from "./Header";
 
 export function EmployeeLayout() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Sidebar role="employee" />
       <div className="ml-64">
-        <Header title="Employee Portal" />
+        <Header title="People of Podtech" />
         <main className="p-6">
           <Outlet />
         </main>
