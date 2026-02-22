@@ -3,7 +3,9 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(npm create:*)",
-      "Bash(npm init:*)"
+      "Bash(npm init:*)",
+      "Bash(cd /c/projects/zoho_req && npx tsc -b 2>&1)",
+      "Bash(cd /c/projects/zoho_req && npm run build 2>&1)"
     ]
   }
 }

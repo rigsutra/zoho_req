@@ -33,8 +33,8 @@ export function HolidaysPage() {
   const [editingHoliday, setEditingHoliday] = useState<any>(null);
   const [locationFilter, setLocationFilter] = useState<string>("");
 
-  const holidays = useQuery(api.holidays.listAll, { 
-    location: locationFilter || undefined 
+  const holidays = useQuery(api.holidays.listAll, {
+    location: locationFilter || undefined,
   });
   const locations = useQuery(api.holidays.getLocations);
   const removeHoliday = useMutation(api.holidays.remove);
@@ -42,12 +42,16 @@ export function HolidaysPage() {
 
   const handleDelete = async (id: Id<"holidays">) => {
     if (!confirm("Are you sure you want to delete this holiday?")) return;
-    
+
     try {
       await removeHoliday({ holidayId: id });
       toast({ title: "Holiday deleted successfully", variant: "success" });
     } catch (err: unknown) {
-      toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -73,7 +77,9 @@ export function HolidaysPage() {
               >
                 <option value="">All Locations</option>
                 {locations?.map((loc) => (
-                  <option key={loc} value={loc}>{loc}</option>
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
                 ))}
               </Select>
             </div>
@@ -83,7 +89,9 @@ export function HolidaysPage() {
           {holidays === undefined ? (
             <Skeleton className="h-64 w-full" />
           ) : holidays.length === 0 ? (
-            <p className="text-center text-muted-foreground py-12">No holidays found</p>
+            <p className="text-center text-muted-foreground py-12">
+              No holidays found
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -102,16 +110,20 @@ export function HolidaysPage() {
                   .sort((a, b) => a.date.localeCompare(b.date))
                   .map((holiday) => (
                     <TableRow key={holiday._id}>
-                      <TableCell className="font-medium">{holiday.name}</TableCell>
+                      <TableCell className="font-medium">
+                        {holiday.name}
+                      </TableCell>
                       <TableCell>
-                        {new Date(holiday.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: '2-digit'
+                        {new Date(holiday.date).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "2-digit",
                         })}
                       </TableCell>
                       <TableCell>
-                        {new Date(holiday.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                        {new Date(holiday.date).toLocaleDateString("en-US", {
+                          weekday: "long",
+                        })}
                       </TableCell>
                       <TableCell>
                         {holiday.location ? (
@@ -174,13 +186,13 @@ export function HolidaysPage() {
   );
 }
 
-function HolidayFormDialog({ 
-  open, 
-  onOpenChange, 
+function HolidayFormDialog({
+  open,
+  onOpenChange,
   holiday,
-  locations 
-}: { 
-  open: boolean; 
+  locations,
+}: {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   holiday?: any;
   locations: string[];
@@ -219,9 +231,19 @@ function HolidayFormDialog({
         toast({ title: "Holiday created successfully", variant: "success" });
       }
       onOpenChange(false);
-      setForm({ name: "", date: "", description: "", location: "", isActive: true });
+      setForm({
+        name: "",
+        date: "",
+        description: "",
+        location: "",
+        isActive: true,
+      });
     } catch (err: unknown) {
-      toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: (err as Error).message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -229,7 +251,9 @@ function HolidayFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{holiday ? "Edit Holiday" : "Add New Holiday"}</DialogTitle>
+          <DialogTitle>
+            {holiday ? "Edit Holiday" : "Add New Holiday"}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -240,7 +264,7 @@ function HolidayFormDialog({
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </div>
-          
+
           <div>
             <Label>Date</Label>
             <Input
@@ -258,7 +282,9 @@ function HolidayFormDialog({
             >
               <option value="">All Locations</option>
               {locations.map((loc) => (
-                <option key={loc} value={loc}>{loc}</option>
+                <option key={loc} value={loc}>
+                  {loc}
+                </option>
               ))}
             </Select>
             <p className="text-xs text-muted-foreground mt-1">
@@ -271,7 +297,9 @@ function HolidayFormDialog({
             <Textarea
               placeholder="Additional details about this holiday..."
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
             />
           </div>
 
@@ -281,19 +309,22 @@ function HolidayFormDialog({
                 type="checkbox"
                 id="isActive"
                 checked={form.isActive}
-                onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
+                onChange={(e) =>
+                  setForm({ ...form, isActive: e.target.checked })
+                }
                 className="h-4 w-4"
               />
-              <Label htmlFor="isActive" className="cursor-pointer">Active</Label>
+              <Label htmlFor="isActive" className="cursor-pointer">
+                Active
+              </Label>
             </div>
           )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!form.name || !form.date}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={!form.name || !form.date}>
             {holiday ? "Update" : "Create"} Holiday
           </Button>
         </DialogFooter>
