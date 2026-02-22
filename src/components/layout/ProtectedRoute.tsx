@@ -59,9 +59,9 @@ export function ProtectedRoute({
   // Employee must have an employee profile created by admin
   if (requiredRole === "employee" && !data.employee) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted">
-        <div className="max-w-md rounded-xl border bg-background p-8 text-center shadow-lg">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 text-2xl">
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="max-w-md rounded-lg border bg-card p-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent text-2xl">
             &#128336;
           </div>
           <h2 className="text-xl font-semibold mb-2">

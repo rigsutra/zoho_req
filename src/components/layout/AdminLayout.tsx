@@ -4,10 +4,10 @@ import { Header } from "./Header";
 
 export function AdminLayout() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       <Sidebar role="admin" />
       <div className="ml-64">
-        <Header title="Admin Panel" />
+        <Header title="Admin Portal" />
         <main className="p-6">
           <Outlet />
         </main>

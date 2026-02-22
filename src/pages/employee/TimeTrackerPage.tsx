@@ -160,5 +160,5 @@ function LiveTimer({ baseHours, checkInTime }: { baseHours: number; checkInTime:
     return () => clearInterval(interval);
   }, [checkInTime]);
 
-  return <span className="text-green-600">{formatHours(baseHours + elapsed)}</span>;
+  return <span className="text-primary">{formatHours(baseHours + elapsed)}</span>;
 }

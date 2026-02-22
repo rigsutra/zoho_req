@@ -18,20 +18,12 @@ export function Logo({ className, showText = true, size = "md" }: LogoProps) {
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg blur-sm opacity-75"></div>
-        <div className="relative bg-gradient-to-br from-blue-600 to-purple-700 rounded-lg p-2">
-          <Users className={cn("text-white", sizes.icon)} />
-        </div>
+      <div className="bg-primary rounded-md p-1.5 flex items-center justify-center">
+        <Users className={cn("text-white", sizes.icon)} />
       </div>
       {showText && (
         <div>
-          <h1
-            className={cn(
-              "font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent",
-              sizes.text,
-            )}
-          >
+          <h1 className={cn("font-bold text-foreground", sizes.text)}>
             People of Podtech
           </h1>
         </div>

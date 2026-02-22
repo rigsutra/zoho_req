@@ -74,7 +74,7 @@ export function AttendancePage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Total Records</div>
-            <div className="text-2xl font-bold text-green-600">{records?.length ?? 0}</div>
+            <div className="text-2xl font-bold">{records?.length ?? 0}</div>
           </CardContent>
         </Card>
         <Card>

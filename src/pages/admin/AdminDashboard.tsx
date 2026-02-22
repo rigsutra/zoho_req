@@ -34,10 +34,10 @@ export function AdminDashboard() {
   const currentlyWorking = todayAttendance.filter((a) => a.isCheckedIn).length;
 
   const stats = [
-    { label: "Total Employees", value: activeEmployees.length, icon: Users, color: "text-blue-600" },
-    { label: "Present Today", value: presentToday, icon: Clock, color: "text-green-600" },
-    { label: "Currently In", value: currentlyWorking, icon: CalendarDays, color: "text-orange-600" },
-    { label: "Pending Leaves", value: pendingLeaves.length, icon: AlertCircle, color: "text-red-600" },
+    { label: "Total Employees", value: activeEmployees.length, icon: Users, color: "text-primary" },
+    { label: "Present Today", value: presentToday, icon: Clock, color: "text-primary" },
+    { label: "Currently In", value: currentlyWorking, icon: CalendarDays, color: "text-primary" },
+    { label: "Pending Leaves", value: pendingLeaves.length, icon: AlertCircle, color: "text-destructive" },
   ];
 
   return (
@@ -75,7 +75,7 @@ export function AdminDashboard() {
                       {leave.leaveType?.name} &middot; {leave.startDate} to {leave.endDate} ({leave.numberOfDays} days)
                     </p>
                   </div>
-                  <span className="text-sm text-yellow-600 font-medium">Pending</span>
+                  <span className="text-sm text-amber-600 font-medium">Pending</span>
                 </div>
               ))}
             </div>
@@ -103,7 +103,7 @@ export function AdminDashboard() {
                       {record.lastCheckOut && ` | Out: ${formatTime(record.lastCheckOut)}`}
                     </p>
                   </div>
-                  <span className={`text-sm font-medium ${record.isCheckedIn ? "text-green-600" : "text-blue-600"}`}>
+                  <span className={`text-sm font-medium ${record.isCheckedIn ? "text-primary" : "text-muted-foreground"}`}>
                     {record.isCheckedIn ? "Working..." : `${record.totalHours.toFixed(1)}h`}
                   </span>
                 </div>

@@ -130,8 +130,8 @@ export function EmployeeHome() {
       {/* Left Sidebar - Profile Card */}
       <div className="w-80 space-y-4">
         <Card className="overflow-hidden">
-          {/* Profile Header with gradient background */}
-          <div className="h-24 bg-gradient-to-br from-green-400 via-emerald-500 to-teal-600 relative">
+          {/* Profile Header */}
+          <div className="h-24 bg-primary relative">
             <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
               {profile ? (
                 <Avatar
@@ -353,7 +353,7 @@ function ActivitiesTab({
   return (
     <div className="space-y-6">
       {/* Greeting Card */}
-      <Card className="bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-100">
+      <Card className="bg-secondary">
         <CardContent className="flex items-center gap-4 py-6">
           <div className="text-5xl">🧠</div>
           <div className="flex-1">
@@ -395,8 +395,8 @@ function ActivitiesTab({
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-blue-600" />
+              <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center">
+                <Clock className="h-6 w-6 text-accent-foreground" />
               </div>
               <div className="flex-1">
                 <p className="font-medium">General</p>
@@ -422,7 +422,7 @@ function ActivitiesTab({
                         {day} {dayNum}
                       </div>
                       {isToday ? (
-                        <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center font-semibold text-sm">
+                        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold text-sm">
                           {dayNum}
                         </div>
                       ) : (
@@ -448,7 +448,7 @@ function ActivitiesTab({
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 rounded-lg bg-muted">
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-2xl font-bold">
                   {todayRecord.firstCheckIn
                     ? formatTime(todayRecord.firstCheckIn)
                     : "--:--"}
@@ -458,7 +458,7 @@ function ActivitiesTab({
                 </div>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted">
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold">
                   {todayRecord.lastCheckOut
                     ? formatTime(todayRecord.lastCheckOut)
                     : "--:--"}
@@ -468,7 +468,7 @@ function ActivitiesTab({
                 </div>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-2xl font-bold">
                   {formatHours(todayRecord.totalHours)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -657,7 +657,7 @@ function AttendanceTab() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Days Present</div>
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-bold">
               {records?.length ?? 0}
             </div>
           </CardContent>
@@ -665,7 +665,7 @@ function AttendanceTab() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Total Hours</div>
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-3xl font-bold">
               {formatHours(totalHours)}
             </div>
           </CardContent>
@@ -673,7 +673,7 @@ function AttendanceTab() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Average/Day</div>
-            <div className="text-3xl font-bold text-purple-600">
+            <div className="text-3xl font-bold">
               {records?.length
                 ? formatHours(totalHours / records.length)
                 : "0h"}

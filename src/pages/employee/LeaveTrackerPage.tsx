@@ -135,7 +135,7 @@ export function LeaveTrackerPage() {
           </TabsList>
           <Button
             onClick={() => setIsApplyOpen(true)}
-            className="gap-2 rounded-full px-6"
+            className="gap-2"
           >
             <Plus className="h-4 w-4" /> Apply Leave
           </Button>
@@ -221,12 +221,12 @@ function LeaveSummaryTab({
       {/* Stats Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6 text-sm">
-          <span className="bg-white px-4 py-2 rounded-full border shadow-sm">
-            Leave booked this year: <strong>{yearStats.booked}</strong>
+          <span className="text-sm text-muted-foreground">
+            Leave booked this year: <strong className="text-foreground">{yearStats.booked}</strong>
           </span>
-          <span className="text-muted-foreground">|</span>
-          <span className="bg-white px-4 py-2 rounded-full border shadow-sm">
-            Absent: <strong>{yearStats.absent}</strong>
+          <span className="text-muted-foreground">·</span>
+          <span className="text-sm text-muted-foreground">
+            Absent: <strong className="text-foreground">{yearStats.absent}</strong>
           </span>
         </div>
 
