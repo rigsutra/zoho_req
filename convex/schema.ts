@@ -27,7 +27,7 @@ export default defineSchema({
     status: v.union(
       v.literal("active"),
       v.literal("inactive"),
-      v.literal("terminated")
+      v.literal("terminated"),
     ),
   })
     .index("by_userId", ["userId"])
@@ -46,7 +46,7 @@ export default defineSchema({
     status: v.union(
       v.literal("present"),
       v.literal("half-day"),
-      v.literal("absent")
+      v.literal("absent"),
     ),
     isCheckedIn: v.boolean(),
   })
@@ -107,7 +107,7 @@ export default defineSchema({
       v.literal("pending"),
       v.literal("approved"),
       v.literal("rejected"),
-      v.literal("cancelled")
+      v.literal("cancelled"),
     ),
     appliedOn: v.string(),
     reviewedBy: v.optional(v.id("users")),

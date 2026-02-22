@@ -12,7 +12,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const admin = await requireAdmin(ctx);
-    
+
     return await ctx.db.insert("holidays", {
       name: args.name,
       date: args.date,
@@ -37,7 +37,7 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    
+
     await ctx.db.patch(args.holidayId, {
       name: args.name,
       date: args.date,
@@ -66,16 +66,16 @@ export const listAll = query({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    
+
     const holidays = await ctx.db.query("holidays").collect();
-    
+
     // Filter by location if specified
     if (args.location) {
       return holidays.filter(
-        h => h.location === "" || h.location === args.location
+        (h) => h.location === "" || h.location === args.location,
       );
     }
-    
+
     return holidays;
   },
 });
@@ -89,24 +89,27 @@ export const getUpcoming = query({
   handler: async (ctx, args) => {
     const { employee } = await getCurrentEmployee(ctx);
     const fromDate = args.fromDate || new Date().toISOString().split("T")[0]!;
-    
+
     // Get employee's location (department can be used as location)
     const employeeLocation = employee.department;
-    
+
     // Get holidays that apply to this employee's location or all locations
     const allHolidays = await ctx.db
       .query("holidays")
       .withIndex("by_isActive", (q) => q.eq("isActive", true))
       .collect();
-    
+
     const applicableHolidays = allHolidays
-      .filter(h => 
-        (h.location === "" || h.location === employeeLocation) &&
-        h.date >= fromDate
+      .filter(
+        (h) =>
+          (h.location === "" || h.location === employeeLocation) &&
+          h.date >= fromDate,
       )
       .sort((a, b) => a.date.localeCompare(b.date));
-    
-    return args.limit ? applicableHolidays.slice(0, args.limit) : applicableHolidays;
+
+    return args.limit
+      ? applicableHolidays.slice(0, args.limit)
+      : applicableHolidays;
   },
 });
 
@@ -118,20 +121,21 @@ export const getForYear = query({
   handler: async (ctx, args) => {
     const { employee } = await getCurrentEmployee(ctx);
     const employeeLocation = employee.department;
-    
+
     const startDate = `${args.year}-01-01`;
     const endDate = `${args.year}-12-31`;
-    
+
     const allHolidays = await ctx.db
       .query("holidays")
       .withIndex("by_isActive", (q) => q.eq("isActive", true))
       .collect();
-    
+
     return allHolidays
-      .filter(h => 
-        (h.location === "" || h.location === employeeLocation) &&
-        h.date >= startDate &&
-        h.date <= endDate
+      .filter(
+        (h) =>
+          (h.location === "" || h.location === employeeLocation) &&
+          h.date >= startDate &&
+          h.date <= endDate,
       )
       .sort((a, b) => a.date.localeCompare(b.date));
   },
@@ -142,10 +146,10 @@ export const getLocations = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    
+
     const employees = await ctx.db.query("employees").collect();
-    const locations = new Set(employees.map(e => e.department));
-    
+    const locations = new Set(employees.map((e) => e.department));
+
     return Array.from(locations).sort();
   },
 });
